@@ -1,7 +1,6 @@
 #[macro_use] extern crate rocket;
 
 use rocket::response::stream::ByteStream;
-use rand::{thread_rng, Rng};
 
 //use rocket::data::{Data, ToByteUnit};
 
@@ -29,16 +28,14 @@ const CHUNK_SIZE: usize = 1_000;
 const CHUNKS: usize = DOWNLOAD_BYTES / CHUNK_SIZE;
 
 #[get("/download")]
-async fn download() -> ByteStream![[u8; CHUNK_SIZE]] {
+async fn download() -> ByteStream![Vec<u8>] {
     ByteStream! {
         for _ in 0..CHUNKS {
-            let mut arr = [0u8; CHUNK_SIZE];
-            rand::thread_rng().fill(&mut arr);
-            yield arr;
-            //yield [rand::random::<u8>()];
-            //yield Standard.sample(&mut rand::thread_rng());
-            //yield Distribuion<NonZeroU8>.sample_iter(&mut rand::thread_rng()).into();
-            //yield Alphanumeric.sample_string(&mut rand::thread_rng(), CHUNK_SIZE);
+            let mut chunk = Vec::new();
+            for _ in 0..CHUNK_SIZE {
+                chunk.push(rand::random::<u8>());
+            }
+            yield chunk;
         }
     }
 }
