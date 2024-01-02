@@ -1,3 +1,6 @@
 # https://rocket.rs/v0.5/guide/configuration/#rockettoml
 [default]
 address = "0.0.0.0"
+
+[default.limits]
+data = "50 MB"
