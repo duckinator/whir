@@ -1,8 +1,9 @@
 #[macro_use] extern crate rocket;
 
 use rocket::response::stream::ByteStream;
-
 //use rocket::data::{Data, ToByteUnit};
+
+use rand::RngCore;
 
 const INDEX: &'static str = include_str!("index.html");
 
@@ -23,18 +24,22 @@ async fn upload(data: Vec<u8>) -> std::io::Result<()> {
 }
 
 
-const DOWNLOAD_BYTES: usize = 50_000_000;
-const CHUNK_SIZE: usize = 1_000;
-const CHUNKS: usize = DOWNLOAD_BYTES / CHUNK_SIZE;
+const CHUNK_SIZE: usize = 1_024 * 1_024; // 1MB
+const CHUNKS: usize = 50; // in MB
+const DOWNLOAD_BYTES: usize = CHUNKS * CHUNK_SIZE;
 
 #[get("/download")]
 async fn download() -> ByteStream![Vec<u8>] {
+    let mut chunks: Vec<Vec<u8>> = Vec::new();
+
+    for _ in 0..CHUNKS {
+        let mut chunk = [0u8; CHUNK_SIZE];
+        rand::thread_rng().fill_bytes(&mut chunk);
+        chunks.push(chunk.to_vec());
+    }
+
     ByteStream! {
-        for _ in 0..CHUNKS {
-            let mut chunk = Vec::new();
-            for _ in 0..CHUNK_SIZE {
-                chunk.push(rand::random::<u8>());
-            }
+        for chunk in chunks {
             yield chunk;
         }
     }
