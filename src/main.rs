@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use rocket::data::{Data, ToByteUnit};
+use rocket::data::{Data, Limits, ToByteUnit};
 use rocket::http::ContentType;
 
 const CHUNK_SIZE: usize = 1_024 * 1_024; // 1MB
@@ -33,5 +33,10 @@ async fn index() -> (ContentType, &'static str) {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index, empty, upload, download])
+    let figment = rocket::Config::figment()
+        .merge(("address", "0.0.0.0"))
+        .merge(("limits", Limits::new().limit("data", DOWNLOAD_BYTES.bytes())));
+
+
+    rocket::custom(figment).mount("/", routes![index, empty, upload, download])
 }
