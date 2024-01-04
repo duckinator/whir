@@ -1,2 +1,195 @@
 <!doctype html>
-<p>hello, world!</p>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>whir - speed test</title>
+<style>
+* { background: #fafaff; }
+main {
+    font-family: helvetica, sans-serif;
+    font-size: 1.3rem;
+    max-width: 70ch;
+    margin: 0 auto;
+    line-height: 1.25;
+}
+h1 {
+    font-size: 3rem;
+    margin: 1rem;
+    text-align: center;
+}
+section {
+    display: inline-block;
+    width: 49%;
+}
+p {
+    font-size: 4rem;
+    margin: 0;
+}
+a, a:visited { color: #166491; }
+a:active, a:focus, a:hover{ color: #2197db; }
+</style>
+<main>
+    <h1>whir</h1>
+
+    <section>
+        <h2>Download</h2>
+
+        <p><span id="download">-</span> Mbps</p>
+    </section>
+
+    <section>
+        <h2>Upload</h2>
+
+        <p><span id="upload">-</span> Mbps</p>
+    </section>
+
+    <!--<section>
+        <h2>Latency</h2>
+
+        <p><span id="latency">-</span>ms</p>
+    </section>-->
+
+<script id="worker" type="javascript/worker">
+const REQUESTS = 10;
+
+async function readAllChunks(readableStream) {
+    const reader = readableStream.getReader();
+
+    let done, value;
+    while (!done) {
+        ({ value, done } = await reader.read());
+        if (done) {
+            return;
+        }
+        self.postMessage({"type": "download", "value": value.length});
+    }
+}
+
+function download(done) {
+    console.log("download");
+
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    var downloaders = 0;
+
+    for (var i = 0; i < REQUESTS; i++) {
+        downloaders += 1;
+        fetch(location.origin + "/download?i=" + i + "t=" + Date.now(), { signal })
+            .then((response) => readAllChunks(response.body))
+            .then(() => { downloaders -= 1 });
+    }
+
+    setTimeout(() => {
+        console.log("force-stopping downloads");
+        controller.abort();
+    }, 30 * 1000);
+
+    let interval = setInterval(() => {
+        if (downloaders <= 0) {
+            clearInterval(interval);
+            done();
+        }
+    }, 1000);
+}
+
+function upload(done) {
+    console.log("upload");
+
+    var method = "POST";
+    var size = 50 * 1000 * 1000;
+    var body = "x".repeat(size);
+
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    var uploaders = 0;
+
+    self.postMessage({"type": "upload", "value": 0});
+    for (var i = 0; i < REQUESTS; i++) {
+        uploaders += 1;
+        fetch(location.origin + "/upload?i=" + i + "t=" + Date.now(), { signal, method, body })
+            .then((response) => {})
+            .then(() => {
+                uploaders -= 1;
+                self.postMessage({"type": "upload", "value": size});
+            });
+    }
+
+    setTimeout(() => {
+        console.log("force-stopping uploads");
+        controller.abort();
+    }, 30 * 1000);
+
+    let interval = setInterval(() => {
+        if (uploaders <= 0) {
+            clearInterval(interval);
+            done();
+        }
+    }, 1000);
+}
+
+download(() =>
+    upload(() => self.postMessage("done")));
+</script>
+<script>
+function bytesToMbit(bytes) {
+    if (!bytes) {
+        return 0;
+    }
+
+    var bits = bytes * 8;
+    return bits / 1000000;
+}
+
+var start_times = {};
+var end_times = {};
+var values = {};
+function update(e, interval) {
+    var data = e.data;
+    if (data == "done") {
+        console.log("DONE!");
+        clearInterval(interval);
+        return;
+    }
+
+    var type = data["type"];
+    var value = data["value"];
+
+    if (!values[type]) {
+        start_times[type] = Date.now();
+        values[type] = 0;
+    }
+    end_times[type] = Date.now();
+
+    values[type] += value;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Create an inline Worker from <script id="${id}" ...>.
+    var blob = new Blob([
+        document.getElementById("worker").textContent
+    ], { type: "text/javascript" })
+
+    var worker = new Worker(window.URL.createObjectURL(blob));
+
+    let interval = setInterval(() => {
+        var types = ["download", "upload"];
+        for (var i in types) {
+            var type = types[i];
+            // Date.now() returns milliseconds, but we want seconds, so divide by 1000.
+            var duration = (end_times[type] - start_times[type]) / 1000;
+            var size = bytesToMbit(values[type]);
+
+            if (duration == 0 || size == 0) {
+                return;
+            }
+
+            document.getElementById(type).innerText = Math.round(size / duration);
+        }
+    }, 1000);
+
+    worker.onmessage = function(e) { update(e, interval); };
+
+});
+</script>
+</main>

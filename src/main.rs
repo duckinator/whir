@@ -1,11 +1,7 @@
 #[macro_use] extern crate rocket;
 
-use rocket::response::stream::ByteStream;
 use rocket::data::{Data, ToByteUnit};
-
-use rand::RngCore;
-
-const INDEX: &'static str = include_str!("index.html");
+use rocket::http::ContentType;
 
 const CHUNK_SIZE: usize = 1_024 * 1_024; // 1MB
 const CHUNKS: usize = 50; // in MB
@@ -18,36 +14,21 @@ async fn empty() -> &'static str {
 
 #[post("/upload", data="<data>")]
 async fn upload(data: Data<'_>) -> std::io::Result<()> {
-    let bytes = data.open(DOWNLOAD_BYTES.bytes() + 1)
+    data.open(DOWNLOAD_BYTES.bytes() + 1)
         .into_bytes()
         .await?;
-
-    // TODO: Return bytes[bytes.len() - 1] as a confirmation that it was read.
 
     Ok(())
 }
 
-
 #[get("/download")]
-async fn download() -> ByteStream![Vec<u8>] {
-    let mut chunks: Vec<Vec<u8>> = Vec::new();
-
-    for _ in 0..CHUNKS {
-        let mut chunk = [0u8; CHUNK_SIZE];
-        rand::thread_rng().fill_bytes(&mut chunk);
-        chunks.push(chunk.to_vec());
-    }
-
-    ByteStream! {
-        for chunk in chunks {
-            yield chunk;
-        }
-    }
+async fn download() -> Vec<u8> {
+    [1u8; DOWNLOAD_BYTES].to_vec()
 }
 
 #[get("/")]
-async fn index() -> &'static str {
-    INDEX
+async fn index() -> (ContentType, &'static str) {
+    (ContentType::HTML, include_str!("index.html"))
 }
 
 #[launch]
