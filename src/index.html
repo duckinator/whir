@@ -48,11 +48,11 @@ h1.running { animation: whir 10s linear infinite; }
         <p><span id="upload">-</span> Mbps</p>
     </section>
 
-    <!--<section>
+    <section>
         <h2>Latency</h2>
 
         <p><span id="latency">-</span>ms</p>
-    </section>-->
+    </section>
 
 <script id="worker" type="javascript/worker">
 const DOWNLOAD_REQUESTS = 10;
@@ -136,8 +136,23 @@ function upload(done) {
     }, 1000);
 }
 
-download(() =>
-    upload(() => self.postMessage("done")));
+function latency(done) {
+    console.log("latency");
+
+    fetch(location.origin + "/empty?t=" + Date.now())
+        .then(() => {
+            var start = Date.now();
+            fetch(location.origin + "/empty?t=" + start)
+                .then(() => {
+                    self.postMessage({"type": "latency", "value": Date.now() - start});
+                    done();
+                });
+        });
+}
+
+latency(() =>
+    download(() =>
+        upload(() => self.postMessage("done"))));
 </script>
 <script>
 function bytesToMbit(bytes) {
@@ -163,6 +178,11 @@ function update(e, interval) {
 
     var type = data["type"];
     var value = data["value"];
+
+    if (type == "latency") {
+        values[type] = value;
+        return;
+    }
 
     if (!values[type]) {
         start_times[type] = Date.now();
@@ -192,10 +212,15 @@ document.addEventListener("DOMContentLoaded", function() {
             var size = bytesToMbit(values[type]);
 
             if (duration == 0 || size == 0) {
-                return;
+                continue;
             }
 
             document.getElementById(type).innerText = Math.round(size / duration);
+        }
+
+        var latency = values["latency"];
+        if (latency) {
+            document.getElementById("latency").innerText = latency;
         }
     }, 1000);
 
