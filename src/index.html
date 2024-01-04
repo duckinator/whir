@@ -127,6 +127,7 @@ function upload(done) {
     setTimeout(() => {
         console.log("force-stopping uploads");
         controller.abort();
+        uploaders = 0;
     }, 30 * 1000);
 
     let interval = setInterval(() => {
