@@ -12,8 +12,9 @@ main {
     line-height: 1.25;
 }
 h1 {
+    width: 4ch;
     font-size: 3rem;
-    margin: 1rem;
+    margin: 1rem auto;
     text-align: center;
 }
 section {
@@ -26,6 +27,11 @@ p {
 }
 a, a:visited { color: #166491; }
 a:active, a:focus, a:hover{ color: #2197db; }
+h1.running { animation: whir 10s linear infinite; }
+@keyframes whir {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 </style>
 <main>
     <h1>whir</h1>
@@ -149,6 +155,7 @@ function update(e, interval) {
     if (data == "done") {
         console.log("DONE!");
         clearInterval(interval);
+        document.querySelector("h1").className = "";
         return;
     }
 
@@ -165,6 +172,8 @@ function update(e, interval) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
+    document.querySelector("h1").className = "running";
+
     // Create an inline Worker from <script id="${id}" ...>.
     var blob = new Blob([
         document.getElementById("worker").textContent
