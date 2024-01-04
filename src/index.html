@@ -90,6 +90,7 @@ function download(done) {
     setTimeout(() => {
         console.log("force-stopping downloads");
         controller.abort();
+        downloaders = 0;
     }, 30 * 1000);
 
     let interval = setInterval(() => {
