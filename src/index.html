@@ -55,7 +55,9 @@ h1.running { animation: whir 10s linear infinite; }
     </section>-->
 
 <script id="worker" type="javascript/worker">
-const REQUESTS = 10;
+const DOWNLOAD_REQUESTS = 10;
+const UPLOAD_REQUESTS = 20;
+const UPLOAD_MB = 20;
 
 async function readAllChunks(readableStream) {
     const reader = readableStream.getReader();
@@ -78,7 +80,7 @@ function download(done) {
 
     var downloaders = 0;
 
-    for (var i = 0; i < REQUESTS; i++) {
+    for (var i = 0; i < DOWNLOAD_REQUESTS; i++) {
         downloaders += 1;
         fetch(location.origin + "/download?i=" + i + "t=" + Date.now(), { signal })
             .then((response) => readAllChunks(response.body))
@@ -102,7 +104,7 @@ function upload(done) {
     console.log("upload");
 
     var method = "POST";
-    var size = 25 * 1000 * 1000;
+    var size = UPLOAD_MB * 1000 * 1000;
     var body = "x".repeat(size);
 
     const controller = new AbortController();
@@ -111,7 +113,7 @@ function upload(done) {
     var uploaders = 0;
 
     self.postMessage({"type": "upload", "value": 0});
-    for (var i = 0; i < REQUESTS; i++) {
+    for (var i = 0; i < UPLOAD_REQUESTS; i++) {
         uploaders += 1;
         fetch(location.origin + "/upload?i=" + i + "t=" + Date.now(), { signal, method, body })
             .then((response) => {})

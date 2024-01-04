@@ -4,7 +4,7 @@ use rocket::data::{Data, Limits, ToByteUnit};
 use rocket::http::ContentType;
 
 const CHUNK_SIZE: usize = 1_024 * 1_024; // 1MB
-const CHUNKS: usize = 25; // in MB
+const CHUNKS: usize = 50; // in MB
 const DOWNLOAD_BYTES: usize = CHUNKS * CHUNK_SIZE;
 
 #[get("/empty")]
